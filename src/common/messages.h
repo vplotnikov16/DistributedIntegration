@@ -7,6 +7,7 @@
 #include <cereal/cereal.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/string.hpp>
+#include "systeminfo.h"
 
 /**
  * @file messages.h
@@ -19,10 +20,14 @@
  */
 struct Task
 {
-    uint64_t id = 0;    ///< Уникальный идентификатор задачи
-    double begin = 0.0; ///< Нижний предел интегрирования
-    double end = 0.0;   ///< Верхний предел интегрирования
-    double step = 0.0;  ///< Шаг интегрирования
+    // Уникальный ID задачи
+    uint64_t id = 0;
+    // Нижний предел интегрирования
+    double begin = 0.0;
+    // Верхний предел интегрирования
+    double end = 0.0;
+    // Шаг интегрирования
+    double step = 0.0;
 
     /**
      * @brief Проверяет корректность параметров задачи
@@ -100,6 +105,32 @@ struct TaskBatch
 };
 
 /**
+ * @struct ResultBatch
+ * @brief Пакет результатов от одного клиента
+ */
+struct ResultBatch
+{
+    // ID клиента, который отправил результаты
+    uint64_t client_id = 0;
+    // Массив результатов вычислений
+    std::vector<Result> results;
+    // Общее время выполнения всех задач
+    double total_time_seconds = 0.0;
+
+    /**
+     * @brief Метод сериализации для Cereal
+     */
+    template <class Archive>
+    void serialize(Archive &archive)
+    {
+        archive(
+            CEREAL_NVP(client_id),
+            CEREAL_NVP(results),
+            CEREAL_NVP(total_time_seconds));
+    }
+};
+
+/**
  * @enum CommandType
  * @brief Типы управляющих команд
  */
@@ -132,7 +163,98 @@ struct Command
     {
         archive(
             CEREAL_NVP(type),
-            CEREAL_NVP(message)
-        );
+            CEREAL_NVP(message));
     }
+};
+
+/**
+ * @struct ClientInfo
+ * @brief Информация о клиенте с уникальным идентификатором
+ */
+struct ClientInfo
+{
+    // Уникальный ID клиента
+    uint64_t client_id = 0;
+    // Информация о системе клиента
+    SystemInfo system_info;
+
+    /**
+     * @brief Метод сериализации для Cereal
+     */
+    template <class Archive>
+    void serialize(Archive &archive)
+    {
+        archive(
+            CEREAL_NVP(client_id),
+            CEREAL_NVP(system_info));
+    }
+};
+
+/**
+ * @struct HandshakeRequest
+ * @brief Запрос на подключение от клиента
+ */
+struct HandshakeRequest
+{
+    // Версия клиента
+    std::string client_version;
+    SystemInfo system_info;
+
+    /**
+     * @brief Метод сериализации для Cereal
+     */
+    template <class Archive>
+    void serialize(Archive &archive)
+    {
+        archive(
+            CEREAL_NVP(client_version),
+            CEREAL_NVP(system_info));
+    }
+};
+
+/**
+ * @struct HandshakeResponse
+ * @brief Ответ сервера на запрос подключения
+ */
+struct HandshakeResponse
+{
+    // Присвоенный ID клиента
+    uint64_t assigned_client_id = 0;
+    // Версия сервера
+    std::string server_version = "1.0.0";
+    // Принято ли подключение
+    bool accepted = true;
+    // Сообщение
+    std::string message;
+
+    /**
+     * @brief Метод сериализации для Cereal
+     */
+    template <class Archive>
+    void serialize(Archive &archive)
+    {
+        archive(
+            CEREAL_NVP(assigned_client_id),
+            CEREAL_NVP(server_version),
+            CEREAL_NVP(accepted),
+            CEREAL_NVP(message));
+    }
+};
+
+/**
+ * @enum MessageType
+ * @brief Типы сообщений
+ */
+enum class MessageType : uint8_t
+{
+    // Запрос на подключение
+    HANDSHAKE_REQUEST = 1,
+    // Ответ на запрос подключения
+    HANDSHAKE_RESPONSE = 2,
+    // Пакет задач
+    TASK_BATCH = 3,
+    // Пакет результатов
+    RESULT_BATCH = 4,
+    // Управляющая команда
+    COMMAND = 5
 };
