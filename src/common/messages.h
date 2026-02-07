@@ -49,7 +49,7 @@ struct Task
         result &= !(begin < 1.0 && end > 1.0);
         result &= !(std::abs(begin - 1.0) < 1e-10 || std::abs(end - 1.0) < 1e-10);
 
-        return true;
+        return result;
     }
 
     /**
