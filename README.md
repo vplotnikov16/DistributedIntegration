@@ -16,7 +16,7 @@ git submodule update --init src/third_party/boost
 cd src/third_party/boost
 # 2)
 bootstrap.bat  # Если Windows
-./boostrap.sh  # Если Linux или macOS
+./bootstrap.sh  # Если Linux или macOS
 # 3)
 b2 headers     # Если Windows
 ./b2 headers   # Если Linux или macOS
