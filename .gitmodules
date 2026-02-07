@@ -5,3 +5,7 @@
 [submodule "src/third_party/cereal"]
 	path = src/third_party/cereal
 	url = https://github.com/USCiLab/cereal.git
+	
+[submodule "src/third_party/spdlog"]
+	path = src/third_party/spdlog
+	url = https://github.com/gabime/spdlog.git

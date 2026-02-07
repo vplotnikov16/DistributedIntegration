@@ -1,40 +1,72 @@
 #include <iostream>
 #include <thread>
-#include <utils.h>
-#include <net_utils.h>
-#include <about.h>
+#include "utils.h"
+#include "net_utils.h"
+#include "about.h"
+#include "logger.h"
 
 using boost::asio::ip::tcp;
 
 void printWelcomeMessage()
 {
-    std::cout << "Client for distributed integration of 1/ln(x) (v" << CLIENT_VERSION << ")\n";
+    LOG_INFO("Client for distributed integration of 1/ln(x)");
+    LOG_INFO("Version: {}", CLIENT_VERSION);
 }
 
 int main()
 {
+    // Инициализация логгера
     try
     {
+        logging::init("client", spdlog::level::debug);
+    }
+    catch (const std::exception &e)
+    {
+        // Если логгер не инициализирован, то пишем об этом и завершаем работу
+        std::cerr << "Failed to initialize logger: " << e.what() << std::endl;
+        return 1;
+    }
+
+    printWelcomeMessage();
+
+    try
+    {
+        LOG_DEBUG("Collecting system information...");
+        SystemInfo info = sys_utils::collect_system_info();
+
+        LOG_INFO("System information:");
+        LOG_INFO("  OS: {}", to_string(info.os_type));
+        LOG_INFO("  Architecture: {}", to_string(info.architecture));
+        LOG_INFO("  CPU cores: {}", info.cpu_cores);
+        LOG_INFO("  RAM: {} MB", info.total_ram_mb);
+
         // Контекст ввода/вывода
         boost::asio::io_context io;
+
+        LOG_DEBUG("Creating socket...");
         // Создаем сокет
         tcp::socket socket(io);
 
+        LOG_INFO("Connecting to server at 127.0.0.1:5555...");
         socket.connect(
             tcp::endpoint(
-                boost::asio::ip::make_address("127.0.0.1"), 
-                5555
-            )
-        );
+                boost::asio::ip::make_address("127.0.0.1"),
+                5555));
+        LOG_INFO("Connected successfully");
 
-        SystemInfo info = sys_utils::collect_system_info();
-
+        LOG_DEBUG("Sending system info to server...");
         net_utils::send_data(socket, info);
-        
+        LOG_INFO("System info sent to server");
+
         std::cout << "System info sent to server\n";
     }
     catch (std::exception &e)
     {
+        LOG_ERROR("Client error: {}", e.what());
         std::cerr << e.what() << "\n";
+        logging::shutdown();
+        return 1;
     }
+    logging::shutdown();
+    return 0;
 }

@@ -1,5 +1,7 @@
 # Общие исходники
 set(COMMON_SOURCES
+    logger.cpp
+    logger.h
     messages.h
     net_utils.h
     systeminfo.h
@@ -24,6 +26,7 @@ target_include_directories(common
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src/third_party/boost
     ${CMAKE_SOURCE_DIR}/src/third_party/cereal/include
+    ${CMAKE_SOURCE_DIR}/src/third_party/spdlog/include
 )
 
 # Определения препроцессора
