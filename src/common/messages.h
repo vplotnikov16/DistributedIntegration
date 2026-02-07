@@ -36,10 +36,20 @@ struct Task
     bool is_valid() const
     {
         // ограничения для интегрирования 1/ln(x)
-        return begin < end &&
-               step > 0.0 &&
-               step < (end - begin) &&
-               begin > 1.0;
+        bool result = true;
+        
+        // Начало не может быть больше конца, шаг должен быть положительным
+        // и быть меньше длины интегрируемого интервала
+        result &= !(begin >= end || step <= 0.0 || step >= (end - begin));
+
+        // Нижний предел должен быть положительным
+        result &= !(begin <= 0.0);
+
+        // Интервал не должен содержать x = 1
+        result &= !(begin < 1.0 && end > 1.0);
+        result &= !(std::abs(begin - 1.0) < 1e-10 || std::abs(end - 1.0) < 1e-10);
+
+        return true;
     }
 
     /**

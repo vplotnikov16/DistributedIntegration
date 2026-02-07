@@ -1,7 +1,11 @@
 # Исполняемый файл клиента
 add_executable(client
-    main.cpp
+    integration_methods/integration_strategy.h
+    integration_methods/trapezoidal_rule.h
     about.h
+    integrator.cpp
+    integrator.h
+    main.cpp
 )
 
 # Указываем, где искать заголовочные файлы
