@@ -85,12 +85,24 @@ cmake --build out/build/macos-release
 
 ## Запуск приложения
 
+Для Release:
+
 ```bash
 # Сервер
 ./out/build/<preset>/bin/server
 
 # Клиент
 ./out/build/<preset>/bin/client
+```
+
+Для Debug:
+
+```bash
+# Сервер
+./out/build/<preset>/bin/Debug/server
+
+# Клиент
+./out/build/<preset>/bin/Debug/client
 ```
 
 ## Инструкция по работе с приложением
