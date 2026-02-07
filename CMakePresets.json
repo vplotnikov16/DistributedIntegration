@@ -4,7 +4,7 @@
         {
             "name": "windows-base",
             "hidden": true,
-            "generator": "Ninja",
+            "generator": "Visual Studio 17 2022",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "installDir": "${sourceDir}/out/install/${presetName}",
             "cacheVariables": {
@@ -23,7 +23,7 @@
             "inherits": "windows-base",
             "architecture": {
                 "value": "x64",
-                "strategy": "external"
+                "strategy": "set"
             },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
@@ -35,7 +35,7 @@
             "inherits": "windows-base",
             "architecture": {
                 "value": "x64",
-                "strategy": "external"
+                "strategy": "set"
             },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
@@ -47,7 +47,7 @@
             "inherits": "windows-base",
             "architecture": {
                 "value": "x86",
-                "strategy": "external"
+                "strategy": "set"
             },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
@@ -59,7 +59,7 @@
             "inherits": "windows-base",
             "architecture": {
                 "value": "x86",
-                "strategy": "external"
+                "strategy": "set"
             },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
@@ -127,6 +127,38 @@
             "inherits": "macos-base",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "x64-debug",
+            "configurePreset": "x64-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-release",
+            "configurePreset": "x64-release",
+            "configuration": "Release"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "x64-debug",
+            "configurePreset": "x64-debug",
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "noTestsAction": "error",
+                "stopOnFailure": false
+            }
+        },
+        {
+            "name": "x64-release",
+            "configurePreset": "x64-release",
+            "output": {
+                "outputOnFailure": true
             }
         }
     ]

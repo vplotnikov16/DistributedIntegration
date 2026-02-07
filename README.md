@@ -10,7 +10,7 @@
 
 ## Зависимости
 В проекте используются следующие библиотеки:
-- Boost - подмодуль git для сетевого взаимодействия
+- Boost - подмодуль git для сетевого взаимодействия и юнит тестов
 - Cereal - подмодуль git для сериализации данных
 - spdlog - подмодуль git для логирования
 - Threads - системная библиотека для многопоточности
@@ -83,7 +83,7 @@ cmake --preset macos-release
 cmake --build out/build/macos-release
 ```
 
-## Запуск
+## Запуск приложения
 
 ```bash
 # Сервер
@@ -91,4 +91,81 @@ cmake --build out/build/macos-release
 
 # Клиент
 ./out/build/<preset>/bin/client
+```
+
+## Инструкция по работе с приложением
+
+Сначала необходимо запустить сервер.
+
+```bash
+server
+```
+
+Далее запустить клиент, передав первым аргументом командной строки ip-адрес сервера, затем порт 5555:
+
+```bash
+# Пример в случае запуска сервера и клиента на одной машине
+client 127.0.0.1 5555
+```
+
+Если сервер больше не ожидает подключений, написать в консоль сервера "START" для прекращения ожидания новых клиентов, подготовки задач для подключенных клиентов и отправки им задач.
+Клиенты получат свои задачи, начнут распределенное интегрирование методом Симпсона (выбор захардкожен). Разработан также метод трапеций, но из интерфейса консоли поменять выбор нельзя (не реализовано).
+Как только все клиенты отправят результат серверу, сервер сформирует итоговый ответ и завершит работу, предварительно отправив клиентам команду о завершении работы. 
+
+## Тестирование
+
+Проект включает модульные тесты для проверки корректности методов численного интегрирования.
+
+### Подготовка к запуску тестов
+
+Тесты используют Boost.Test в header-only режиме, поэтому дополнительная сборка библиотек не требуется. Убедитесь, что вы выполнили шаг "Подготовка Boost" из раздела "Сборка проекта".
+
+### Сборка с тестами
+
+Для включения сборки тестов добавьте опцию `-DBUILD_TESTS=ON` при конфигурации проекта:
+
+#### Windows
+
+```bash
+# Debug
+cmake --preset x64-debug -DBUILD_TESTS=ON
+cmake --build out/build/x64-debug --config Debug
+
+# Release
+cmake --preset x64-release -DBUILD_TESTS=ON
+cmake --build out/build/x64-release --config Release
+```
+
+#### Linux
+
+```bash
+# Debug
+cmake --preset linux-debug -DBUILD_TESTS=ON
+cmake --build out/build/linux-debug
+
+# Release
+cmake --preset linux-release -DBUILD_TESTS=ON
+cmake --build out/build/linux-release
+```
+
+
+#### macOS
+
+```bash
+cmake --preset macos-debug -DBUILD_TESTS=ON
+cmake --build out/build/macos-debug
+
+# Release
+cmake --preset macos-release -DBUILD_TESTS=ON
+cmake --build out/build/macos-release
+```
+
+### Запус тестов
+
+```bash
+# Все тесты
+ctest --test-dir out/build/<preset> -C Debug --output-on-failure
+
+# С подробным выводом
+ctest --test-dir out/build/<preset> -C Debug --output-on-failure --verbose
 ```
