@@ -27,24 +27,11 @@
 
 using tcp = boost::asio::ip::tcp;
 
-std::string get_remote_address(tcp::socket &socket)
-{
-    try
-    {
-        if (socket.is_open())
-        {
-            return socket.remote_endpoint().address().to_string();
-        }
-    }
-    catch (const boost::system::system_error &)
-    {
-        // Игнорируем ошибку
-    }
-    return "unknown";
-}
-
 namespace net_utils
 {
+    std::string get_remote_address(const tcp::socket &socket);
+    uint16_t get_port(const tcp::socket &socket);
+
     /**
      * @brief Отправляет сериализованные данные через TCP сокет
      *
@@ -54,7 +41,7 @@ namespace net_utils
      * @tparam T Тип данных для отправки (должен поддерживать сериализацию Cereal)
      * @param socket Открытый TCP сокет Boost.Asio
      * @param data Данные для отправки
-     * 
+     *
      * @code
      * tcp::socket socket(io_context);
      * SystemInfo info = collect_system_info();

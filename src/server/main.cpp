@@ -3,6 +3,7 @@
 #include "net_utils.h"
 #include "about.h"
 #include "logger.h"
+#include "server.h"
 
 using boost::asio::ip::tcp;
 
@@ -12,42 +13,32 @@ void printWelcomeMessage()
     LOG_INFO("Version: {}", SERVER_VERSION);
 }
 
-enum askForVariant
-{
-    lower_limit,
-    upper_limit,
-    step
-};
-
-double askFor(askForVariant variant)
+/**
+ * @brief Запрашивает у пользователя параметр интегрирования
+ * @param prompt Текст запроса
+ * @return Введенное значение
+ */
+double askFor(const std::string &prompt)
 {
     double result;
 
-    switch (variant)
+    while (true)
     {
-    case lower_limit:
-        std::cout << "Enter a lower integration limit: ";
-        break;
-    case upper_limit:
-        std::cout << "Enter an upper integration limit: ";
-        break;
-    case step:
-        std::cout << "Enter integration step size: ";
-        break;
+        std::cout << prompt;
 
-    default:
-        break;
+        if (std::cin >> result)
+        {
+            // Очищаем буфер после успешного ввода
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            return result;
+        }
+        else
+        {
+            std::cout << "Invalid input. Please enter a number.\n";
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        }
     }
-
-    while (!(std::cin >> result))
-    {
-        std::cout << "Invalid input. Please enter a number: ";
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    }
-
-    std::cout << "\n";
-    return result;
 }
 
 int main()
@@ -66,40 +57,26 @@ int main()
 
     printWelcomeMessage();
 
-    double lower_limit = askFor(askForVariant::lower_limit);
-    double upper_limit = askFor(askForVariant::upper_limit);
-    double step = askFor(askForVariant::step);
+    IntegrationParameters params;
+    params.lower_limit = askFor("  Lower limit (x > 0, x != 1): ");
+    params.upper_limit = askFor("  Upper limit (x > lower): ");
+    params.step = askFor("  Integration step: ");
 
-    LOG_INFO("Integration parameters:");
-    LOG_INFO("  Lower limit: {}", lower_limit);
-    LOG_INFO("  Upper limit: {}", upper_limit);
-    LOG_INFO("  Step: {}", step);
+    if (!params.is_valid())
+    {
+        LOG_ERROR("Invalid integration parameters provided");
+        logging::shutdown();
+        return 1;
+    }
 
     try
     {
-        boost::asio::io_context io;
-        tcp::acceptor acceptor(io, tcp::endpoint(tcp::v4(), 5555));
+        const uint16_t PORT = 5555;
+        Server server(PORT);
+        server.run(params);
 
-        LOG_INFO("Server listening on port 5555");
-
-        while (true)
-        {
-            tcp::socket socket(io);
-            acceptor.accept(socket);
-
-            auto remote_ep = socket.remote_endpoint();
-            LOG_INFO("Client connected from {}:{}",
-                     remote_ep.address().to_string(),
-                     remote_ep.port());
-
-            SystemInfo info = net_utils::receive_data<SystemInfo>(socket);
-
-            LOG_DEBUG("Received SystemInfo:");
-            LOG_DEBUG("  OS: {}", to_string(info.os_type));
-            LOG_DEBUG("  Architecture: {}", to_string(info.architecture));
-            LOG_DEBUG("  CPU cores: {}", info.cpu_cores);
-            LOG_DEBUG("  RAM: {} MB", info.total_ram_mb);
-        }
+        logging::shutdown();
+        return 0;
     }
     catch (const std::exception &e)
     {

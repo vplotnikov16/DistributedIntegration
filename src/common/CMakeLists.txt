@@ -3,6 +3,7 @@ set(COMMON_SOURCES
     logger.cpp
     logger.h
     messages.h
+    net_utils.cpp
     net_utils.h
     systeminfo.h
     utils.cpp
