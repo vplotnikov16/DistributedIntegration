@@ -1,6 +1,7 @@
 # Исполняемый файл клиента
 add_executable(client
     integration_methods/integration_strategy.h
+    integration_methods/simpsons_rule.h
     integration_methods/trapezoidal_rule.h
     about.h
     client.cpp

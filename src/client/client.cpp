@@ -3,6 +3,7 @@
 #include "utils.h"
 #include "logger.h"
 #include "integration_methods/trapezoidal_rule.h"
+#include "integration_methods/simpsons_rule.h"
 #include <chrono>
 #include <stdexcept>
 
@@ -26,7 +27,7 @@ Client::Client(const std::string &server_address,
              system_info_.cpu_cores, system_info_.total_ram_mb);
 
     // Создаём интегратор с методом трапеций по умолчанию
-    auto strategy = std::make_unique<TrapezoidalRule>();
+    auto strategy = std::make_unique<SimpsonsRule>();
     integrator_ = std::make_shared<Integrator>(std::move(strategy));
     LOG_INFO("Integration method: {}", integrator_->get_current_method());
 
