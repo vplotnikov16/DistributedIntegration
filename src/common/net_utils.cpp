@@ -3,7 +3,7 @@ using tcp = boost::asio::ip::tcp;
 
 namespace net_utils
 {
-    std::string get_remote_address(const tcp::socket &socket)
+    std::string get_remote_address(tcp::socket &socket)
     {
         try
         {
@@ -19,7 +19,7 @@ namespace net_utils
         return "unknown";
     }
 
-    uint16_t get_port(const tcp::socket &socket)
+    uint16_t get_port(tcp::socket &socket)
     {
         try
         {

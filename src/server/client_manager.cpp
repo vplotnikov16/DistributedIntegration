@@ -11,6 +11,7 @@ uint64_t ClientManager::add_client(std::unique_ptr<ClientConnection> connection)
 {
     if (!accepting_.load())
     {
+        uint64_t client_id = next_client_id_++;
         LOG_WARN("Attempt to add client while not accepting new connections");
         return 0;
     }

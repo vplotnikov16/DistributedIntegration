@@ -4,6 +4,7 @@
 #include "net_utils.h"
 #include "about.h"
 #include "logger.h"
+#include "client.h"
 
 using boost::asio::ip::tcp;
 
@@ -13,7 +14,7 @@ void printWelcomeMessage()
     LOG_INFO("Version: {}", CLIENT_VERSION);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     // Инициализация логгера
     try
@@ -29,6 +30,15 @@ int main()
 
     printWelcomeMessage();
 
+    if (argc != 3)
+    {
+        LOG_ERROR("Usage: {} <ip> <port>", argv[0]);
+        return 1;
+    }
+
+    std::string server_address = argv[1];
+    uint16_t server_port = static_cast<uint16_t>(std::atoi(argv[2]));;
+
     try
     {
         LOG_DEBUG("Collecting system information...");
@@ -40,25 +50,13 @@ int main()
         LOG_INFO("  CPU cores: {}", info.cpu_cores);
         LOG_INFO("  RAM: {} MB", info.total_ram_mb);
 
-        // Контекст ввода/вывода
-        boost::asio::io_context io;
+        Client client(server_address, server_port);
+        client.run();
 
-        LOG_DEBUG("Creating socket...");
-        // Создаем сокет
-        tcp::socket socket(io);
-
-        LOG_INFO("Connecting to server at 127.0.0.1:5555...");
-        socket.connect(
-            tcp::endpoint(
-                boost::asio::ip::make_address("127.0.0.1"),
-                5555));
-        LOG_INFO("Connected successfully");
-
-        LOG_DEBUG("Sending system info to server...");
-        net_utils::send_data(socket, info);
-        LOG_INFO("System info sent to server");
-
-        std::cout << "System info sent to server\n";
+        logging::shutdown();
+        
+        LOG_INFO("Client finished");
+        return 0;
     }
     catch (std::exception &e)
     {

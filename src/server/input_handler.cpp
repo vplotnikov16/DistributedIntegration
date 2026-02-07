@@ -38,13 +38,6 @@ void InputHandler::stop()
     stop_requested_.store(true);
     running_.store(false);
 
-    // Ожидаем завершения потока
-    if (input_thread_.joinable())
-    {
-        // cin может заблокировать поток, поэтому отсоединяем
-        input_thread_.detach();
-    }
-
     LOG_INFO("InputHandler stopped");
 }
 

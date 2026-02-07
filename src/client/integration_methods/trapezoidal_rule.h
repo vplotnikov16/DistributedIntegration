@@ -14,7 +14,7 @@
  * @class TrapezoidRule
  * @brief Метод трапеций
  */
-class TrapezoidRule : public IIntegrationStrategy
+class TrapezoidalRule : public IIntegrationStrategy
 {
 public:
     /**

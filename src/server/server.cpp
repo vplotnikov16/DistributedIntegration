@@ -157,20 +157,46 @@ void Server::accept_thread_func()
     {
         try
         {
-            tcp::socket socket(io_context_);
+            auto socket_ptr = std::make_shared<tcp::socket>(io_context_);
 
-            // Устанавливаем таймаут для accept (не блокирующий бесконечно)
-            acceptor_->async_accept(socket,
-                                    [this, socket = std::move(socket)](const boost::system::error_code &ec) mutable
-                                    {
-                                        if (!ec && running_.load() && client_manager_.is_accepting())
-                                        {
-                                            handle_client_connection(std::move(socket));
-                                        }
-                                    });
+            // ИСПРАВЛЕНИЕ: Используем синхронный accept вместо async
+            acceptor_->accept(*socket_ptr);
 
-            io_context_.run_one();
-            io_context_.restart();
+            if (running_.load() && client_manager_.is_accepting())
+            {
+                // Получаем endpoint ЗДЕСЬ, пока сокет гарантированно валиден
+                std::string client_ip = "unknown";
+                uint16_t client_port = 0;
+
+                try
+                {
+                    if (socket_ptr->is_open())
+                    {
+                        auto endpoint = socket_ptr->remote_endpoint();
+                        client_ip = endpoint.address().to_string();
+                        client_port = endpoint.port();
+                    }
+                }
+                catch (const std::exception &e)
+                {
+                    LOG_WARN("Failed to get remote endpoint: {}", e.what());
+                }
+
+                // Запускаем обработку в отдельном потоке
+                std::thread([this, socket_ptr, client_ip, client_port]() {
+                    handle_client_connection(std::move(*socket_ptr), client_ip, client_port);
+                }).detach();
+            }
+        }
+        catch (const boost::system::system_error &e)
+        {
+            if (e.code() == boost::asio::error::operation_aborted)
+            {
+                // Acceptor был закрыт - это нормально при остановке
+                LOG_DEBUG("Accept operation aborted (normal shutdown)");
+                break;
+            }
+            LOG_ERROR("Error in accept: {}", e.what());
         }
         catch (const std::exception &e)
         {
@@ -181,13 +207,12 @@ void Server::accept_thread_func()
     LOG_DEBUG("Accept thread finished");
 }
 
-void Server::handle_client_connection(tcp::socket socket)
+void Server::handle_client_connection(tcp::socket socket, 
+                                      const std::string &client_ip, 
+                                      uint16_t client_port)
 {
     try
     {
-        std::string client_ip = socket.remote_endpoint().address().to_string();
-        uint16_t client_port = socket.remote_endpoint().port();
-
         LOG_INFO("New connection from {}:{}", client_ip, client_port);
         std::cout << "Client connected from " << client_ip << ":" << client_port << "\n";
 
@@ -212,6 +237,8 @@ void Server::handle_client_connection(tcp::socket socket)
 
         net_utils::send_data(socket, response);
 
+        LOG_INFO("Handshake completed for client {}", client_id);
+
         // Создаём ClientConnection и добавляем в менеджер
         auto connection = std::make_unique<ClientConnection>(
             std::move(socket),
@@ -227,7 +254,8 @@ void Server::handle_client_connection(tcp::socket socket)
     }
     catch (const std::exception &e)
     {
-        LOG_ERROR("Error handling client connection: {}", e.what());
+        LOG_ERROR("Error handling client connection from {}:{}: {}", 
+                  client_ip, client_port, e.what());
     }
 }
 
@@ -238,7 +266,12 @@ void Server::stop_accepting_clients()
 
     if (acceptor_ && acceptor_->is_open())
     {
-        acceptor_->close();
+        boost::system::error_code ec;
+        acceptor_->close(ec);
+        if (ec)
+        {
+            LOG_WARN("Error closing acceptor: {}", ec.message());
+        }
     }
 
     if (accept_thread_.joinable())

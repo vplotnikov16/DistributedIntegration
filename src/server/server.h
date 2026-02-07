@@ -36,7 +36,7 @@ struct IntegrationParameters
     {
         // ограничения для интегрирования 1/ln(x)
         bool result = true;
-        
+
         // Начало не может быть больше конца, шаг должен быть положительным
         // и быть меньше длины интегрируемого интервала
         result &= !(lower_limit >= upper_limit || step <= 0.0 || step >= (upper_limit - lower_limit));
@@ -110,7 +110,9 @@ private:
      * @brief Обработка подключения одного клиента
      * @param socket Сокет подключившегося клиента
      */
-    void handle_client_connection(tcp::socket socket);
+    void handle_client_connection(tcp::socket socket,
+                                  const std::string &client_ip,
+                                  uint16_t client_port);
 
     /**
      * @brief Остановка приема новых клиентов
@@ -159,7 +161,7 @@ private:
      */
     void print_final_result(double final_result, const IntegrationParameters &params);
 
-    // Контекст ввода/вывода 
+    // Контекст ввода/вывода
     boost::asio::io_context io_context_;
     // Аксептор входящих подключений
     std::unique_ptr<tcp::acceptor> acceptor_;

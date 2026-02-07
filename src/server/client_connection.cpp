@@ -18,7 +18,7 @@ ClientConnection::~ClientConnection()
     LOG_DEBUG("ClientConnection destroyed: ID={}", client_id_);
 }
 
-std::string ClientConnection::get_ip_address() const
+std::string ClientConnection::get_ip_address()
 {
     std::string result = net_utils::get_remote_address(socket_);
     if (result == "unknown")
@@ -26,7 +26,7 @@ std::string ClientConnection::get_ip_address() const
     return result;
 }
 
-uint16_t ClientConnection::get_port() const
+uint16_t ClientConnection::get_port()
 {
     uint16_t result = net_utils::get_port(socket_);
     if (result == 0)

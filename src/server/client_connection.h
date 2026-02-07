@@ -69,13 +69,13 @@ public:
      * @brief Геттер IP адреса клиента
      * @return Строка с IP адресом
      */
-    std::string get_ip_address() const;
+    std::string get_ip_address();
 
     /**
      * @brief Геттер порта клиента
      * @return Номер порта
      */
-    uint16_t get_port() const;
+    uint16_t get_port();
 
     /**
      * @brief Геттер ссылки на сокет
