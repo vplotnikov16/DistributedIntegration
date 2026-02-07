@@ -1,7 +1,6 @@
 #include "server.h"
 #include "logger.h"
 #include "net_utils.h"
-#include <iostream>
 #include <iomanip>
 #include <chrono>
 
@@ -22,19 +21,18 @@ void Server::run(const IntegrationParameters &params)
     if (!params.is_valid())
     {
         LOG_ERROR("Invalid integration parameters");
-        std::cerr << "Error: Invalid integration parameters\n";
         return;
     }
 
     LOG_INFO("Starting server with parameters: lower={}, upper={}, step={}",
              params.lower_limit, params.upper_limit, params.step);
 
-    std::cout << "\n=== Distributed Integration Server ===\n";
-    std::cout << "Integration parameters:\n";
-    std::cout << "  Lower limit: " << params.lower_limit << "\n";
-    std::cout << "  Upper limit: " << params.upper_limit << "\n";
-    std::cout << "  Step: " << params.step << "\n";
-    std::cout << "======================================\n\n";
+    LOG_INFO("=== Distributed Integration Server ===");
+    LOG_INFO("Integration parameters:");
+    LOG_INFO("  Lower limit: {}", params.lower_limit);
+    LOG_INFO("  Upper limit: {}", params.upper_limit);
+    LOG_INFO("  Step: {}", params.step);
+    LOG_INFO("======================================");
 
     running_.store(true);
 
@@ -48,6 +46,9 @@ void Server::run(const IntegrationParameters &params)
         LOG_INFO("START command triggered"); });
 
     // Ожидаем команды START
+    LOG_INFO("Waiting for clients to connect...");
+    LOG_INFO("Type 'START' and press Enter to begin integration");
+
     while (!start_received_.load() && running_.load())
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -65,21 +66,19 @@ void Server::run(const IntegrationParameters &params)
     // Проверяем наличие клиентов
     if (client_manager_.get_client_count() == 0)
     {
-        LOG_ERROR("No clients connected");
-        std::cerr << "\nError: No clients connected. Cannot start integration.\n";
+        LOG_ERROR("No clients connected. Cannot start integration.");
         stop();
         return;
     }
 
     client_manager_.log_clients_info();
 
-    std::cout << "\n=== Starting Integration ===\n";
+    LOG_INFO("=== Starting Integration ===");
 
     // Распределяем и отправляем задачи
     if (!distribute_and_send_tasks(params))
     {
-        LOG_ERROR("Failed to distribute tasks");
-        std::cerr << "Error: Failed to distribute tasks to clients\n";
+        LOG_ERROR("Failed to distribute tasks to clients");
         stop();
         return;
     }
@@ -91,8 +90,7 @@ void Server::run(const IntegrationParameters &params)
     // Собираем результаты
     if (!collect_results(aggregator))
     {
-        LOG_ERROR("Failed to collect all results");
-        std::cerr << "Error: Failed to collect results from all clients\n";
+        LOG_ERROR("Failed to collect results from all clients");
         stop();
         return;
     }
@@ -137,8 +135,7 @@ void Server::start_accepting_clients()
             tcp::endpoint(tcp::v4(), port_));
 
         LOG_INFO("Server listening on port {}", port_);
-        std::cout << "Server listening on port " << port_ << "\n";
-        std::cout << "Waiting for clients...\n\n";
+        LOG_INFO("Waiting for clients...");
 
         accept_thread_ = std::thread(&Server::accept_thread_func, this);
     }
@@ -159,7 +156,7 @@ void Server::accept_thread_func()
         {
             auto socket_ptr = std::make_shared<tcp::socket>(io_context_);
 
-            // ИСПРАВЛЕНИЕ: Используем синхронный accept вместо async
+            // Синхронный accept
             acceptor_->accept(*socket_ptr);
 
             if (running_.load() && client_manager_.is_accepting())
@@ -190,7 +187,8 @@ void Server::accept_thread_func()
         }
         catch (const boost::system::system_error &e)
         {
-            if (e.code() == boost::asio::error::operation_aborted)
+            if (e.code() == boost::asio::error::operation_aborted ||
+                e.code().value() == 10004) // WSA_INTERRUPTED
             {
                 // Acceptor был закрыт - это нормально при остановке
                 LOG_DEBUG("Accept operation aborted (normal shutdown)");
@@ -214,7 +212,6 @@ void Server::handle_client_connection(tcp::socket socket,
     try
     {
         LOG_INFO("New connection from {}:{}", client_ip, client_port);
-        std::cout << "Client connected from " << client_ip << ":" << client_port << "\n";
 
         // Получаем HandshakeRequest от клиента
         auto handshake = net_utils::receive_data<HandshakeRequest>(socket);
@@ -247,10 +244,11 @@ void Server::handle_client_connection(tcp::socket socket,
 
         client_manager_.add_client(std::move(connection));
 
-        std::cout << "Client registered: ID=" << client_id
-                  << ", Cores=" << handshake.system_info.cpu_cores << "\n";
-        std::cout << "Total clients: " << client_manager_.get_client_count()
-                  << ", Total cores: " << client_manager_.get_total_cpu_cores() << "\n\n";
+        LOG_INFO("Client registered: ID={}, Cores={}", 
+                 client_id, handshake.system_info.cpu_cores);
+        LOG_INFO("Total clients: {}, Total cores: {}", 
+                 client_manager_.get_client_count(),
+                 client_manager_.get_total_cpu_cores());
     }
     catch (const std::exception &e)
     {
@@ -295,7 +293,7 @@ bool Server::distribute_and_send_tasks(const IntegrationParameters &params)
             params.upper_limit,
             params.step);
 
-        std::cout << "\nDistributing tasks to " << clients.size() << " client(s)...\n";
+        LOG_INFO("Distributing tasks to {} client(s)...", clients.size());
 
         // Отправляем задачи каждому клиенту
         for (auto *client : clients)
@@ -311,7 +309,7 @@ bool Server::distribute_and_send_tasks(const IntegrationParameters &params)
             }
         }
 
-        std::cout << "All tasks sent successfully\n";
+        LOG_INFO("All tasks sent successfully");
         return true;
     }
     catch (const std::exception &e)
@@ -330,8 +328,7 @@ bool Server::send_tasks_to_client(ClientConnection *client, const TaskBatch &bat
         net_utils::send_data(client->get_socket(), batch);
         client->mark_task_sent();
 
-        std::cout << "  Client " << client->get_client_id()
-                  << ": " << batch.tasks.size() << " tasks sent\n";
+        LOG_INFO("Client {}: {} tasks sent", client->get_client_id(), batch.tasks.size());
 
         return true;
     }
@@ -345,7 +342,7 @@ bool Server::send_tasks_to_client(ClientConnection *client, const TaskBatch &bat
 
 bool Server::collect_results(ResultAggregator &aggregator)
 {
-    std::cout << "\nWaiting for results from clients...\n";
+    LOG_INFO("Waiting for results from clients...");
 
     auto clients = client_manager_.get_all_clients();
 
@@ -374,7 +371,6 @@ bool Server::collect_results(ResultAggregator &aggregator)
     if (!all_received)
     {
         LOG_WARN("Not all results received within timeout");
-        std::cout << "\nWarning: Not all results received within timeout\n";
     }
 
     return all_received;
@@ -396,8 +392,9 @@ bool Server::receive_results_from_client(ClientConnection *client, ResultAggrega
 
         aggregator.add_result(result_batch);
 
-        std::cout << "  Client " << client->get_client_id()
-                  << ": results received (" << result_batch.total_time_seconds << "s)\n";
+        LOG_INFO("Client {}: results received ({:.3f}s)", 
+                 client->get_client_id(), 
+                 result_batch.total_time_seconds);
 
         return true;
     }
@@ -412,7 +409,6 @@ bool Server::receive_results_from_client(ClientConnection *client, ResultAggrega
 void Server::send_stop_command_to_all_clients()
 {
     LOG_INFO("Sending STOP command to all clients");
-    std::cout << "\nSending stop command to clients...\n";
 
     auto clients = client_manager_.get_all_clients();
 
@@ -434,20 +430,15 @@ void Server::send_stop_command_to_all_clients()
         }
     }
 
-    std::cout << "Stop commands sent\n";
+    LOG_INFO("Stop commands sent to all clients");
 }
 
 void Server::print_final_result(double final_result, const IntegrationParameters &params)
 {
-    std::cout << "\n";
-    std::cout << "========================================\n";
-    std::cout << "       INTEGRATION COMPLETED\n";
-    std::cout << "========================================\n";
-    std::cout << std::fixed << std::setprecision(15);
-    std::cout << "\nIntegral of 1/ln(x) from " << params.lower_limit
-              << " to " << params.upper_limit << ":\n";
-    std::cout << "\n  Result = " << final_result << "\n";
-    std::cout << "\n========================================\n\n";
-
-    LOG_INFO("Final integration result: {:.15f}", final_result);
+    LOG_INFO("========================================");
+    LOG_INFO("       INTEGRATION COMPLETED");
+    LOG_INFO("========================================");
+    LOG_INFO("Integral of 1/ln(x) from {} to {}", params.lower_limit, params.upper_limit);
+    LOG_INFO("Result = {:.15f}", final_result);
+    LOG_INFO("========================================");
 }

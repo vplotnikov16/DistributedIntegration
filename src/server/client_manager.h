@@ -1,10 +1,10 @@
 #pragma once
 
+#include "client_connection.h"
 #include <vector>
 #include <memory>
 #include <mutex>
 #include <atomic>
-#include "client_connection.h"
 
 /**
  * @file client_manager.h
@@ -21,11 +21,18 @@ class ClientManager
 {
 public:
     ClientManager();
+    ~ClientManager() = default;
+
+    // Запрет копирования и перемещения
+    ClientManager(const ClientManager &) = delete;
+    ClientManager &operator=(const ClientManager &) = delete;
+    ClientManager(ClientManager &&) = delete;
+    ClientManager &operator=(ClientManager &&) = delete;
 
     /**
      * @brief Добавляет нового клиента
      * @param connection Уникальный указатель на ClientConnection
-     * @return ID добавленного клиента
+     * @return ID добавленного клиента, 0 если не принимаем новых клиентов
      */
     uint64_t add_client(std::unique_ptr<ClientConnection> connection);
 
@@ -83,12 +90,18 @@ public:
     void log_clients_info() const;
 
 private:
-    // Мьютекс для потокобезопасности
-    mutable std::mutex mutex_;       
-    // Список клиентов
+    /**
+     * @brief Возвращает суммарное количество CPU ядер без блокировки mutex
+     * @note Использовать только внутри методов, где mutex уже захвачен
+     */
+    uint32_t get_total_cpu_cores_unlocked() const;
+
+    // Список подключенных клиентов
     std::vector<std::unique_ptr<ClientConnection>> clients_;
-    // Счетчик ID клиентов
-    std::atomic<uint64_t> next_client_id_{1};
-    // Флаг, принимаем ли новых клиентов
+    // Мьютекс для thread-safe доступа
+    mutable std::mutex mutex_;
+    // Флаг приёма новых клиентов
     std::atomic<bool> accepting_{true};
+    // Счётчик ID для новых клиентов
+    std::atomic<uint64_t> next_client_id_{1};
 };

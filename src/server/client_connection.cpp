@@ -8,8 +8,9 @@ ClientConnection::ClientConnection(
     const SystemInfo &system_info)
     : socket_(std::move(socket)), client_id_(client_id), system_info_(system_info)
 {
-    LOG_DEBUG("ClientConnection created: ID={}, IP={}, Cores={}",
-              client_id_, get_ip_address(), system_info_.cpu_cores);
+    // Не вызываем get_ip_address() здесь - сокет может быть в переходном состоянии
+    LOG_DEBUG("ClientConnection created: ID={}, Cores={}",
+              client_id_, system_info_.cpu_cores);
 }
 
 ClientConnection::~ClientConnection()

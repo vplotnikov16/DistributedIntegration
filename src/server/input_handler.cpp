@@ -45,15 +45,14 @@ void InputHandler::input_thread_func()
 {
     LOG_DEBUG("Input thread started");
 
-    std::cout << "\n========================================\n";
-    std::cout << "Waiting for clients to connect...\n";
-    std::cout << "Type 'START' and press Enter to begin integration\n";
-    std::cout << "========================================\n\n";
+    LOG_INFO("\n========================================\n");
+    LOG_INFO("Waiting for clients to connect...\n");
+    LOG_INFO("Type 'START' and press Enter to begin integration\n");
+    LOG_INFO("========================================\n\n");
 
     while (!stop_requested_.load())
     {
         std::string input;
-        std::cout << "> ";
         std::getline(std::cin, input);
 
         if (stop_requested_.load())
@@ -79,7 +78,7 @@ void InputHandler::input_thread_func()
         }
         else if (!input.empty())
         {
-            std::cout << "Unknown command: '" << input << "'. Type 'START' to begin.\n";
+            LOG_WARN("Unknown command: '{}'. Type 'START' to begin.", input);
         }
     }
 

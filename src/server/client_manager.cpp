@@ -11,25 +11,28 @@ uint64_t ClientManager::add_client(std::unique_ptr<ClientConnection> connection)
 {
     if (!accepting_.load())
     {
-        uint64_t client_id = next_client_id_++;
         LOG_WARN("Attempt to add client while not accepting new connections");
         return 0;
     }
 
-    std::lock_guard<std::mutex> lock(mutex_);
-
+    // Получаем данные до перемещения в вектор
     uint64_t client_id = connection->get_client_id();
+    std::string ip_address = connection->get_ip_address();
+    uint32_t cpu_cores = connection->get_cpu_cores();
+
+    std::lock_guard<std::mutex> lock(mutex_);
 
     LOG_INFO("Adding client: ID={}, IP={}, Cores={}",
              client_id,
-             connection->get_ip_address(),
-             connection->get_cpu_cores());
+             ip_address,
+             cpu_cores);
 
+    // Перемещаем в вектор
     clients_.push_back(std::move(connection));
 
     LOG_INFO("Total clients: {}, Total CPU cores: {}",
              clients_.size(),
-             get_total_cpu_cores());
+             get_total_cpu_cores_unlocked());
 
     return client_id;
 }
@@ -43,6 +46,11 @@ size_t ClientManager::get_client_count() const
 uint32_t ClientManager::get_total_cpu_cores() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
+    return get_total_cpu_cores_unlocked();
+}
+
+uint32_t ClientManager::get_total_cpu_cores_unlocked() const
+{
     uint32_t total = 0;
     for (const auto &client : clients_)
     {
@@ -120,7 +128,7 @@ void ClientManager::log_clients_info() const
 
     LOG_INFO("=== Connected Clients ===");
     LOG_INFO("Total clients: {}", clients_.size());
-    LOG_INFO("Total CPU cores: {}", get_total_cpu_cores());
+    LOG_INFO("Total CPU cores: {}", get_total_cpu_cores_unlocked());
 
     for (size_t i = 0; i < clients_.size(); ++i)
     {

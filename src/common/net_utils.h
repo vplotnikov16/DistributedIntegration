@@ -124,10 +124,9 @@ namespace net_utils
                 boost::asio::buffer(&network_size, sizeof(network_size)));
             // Сетевой порядок байт
             uint32_t size = ntohl(network_size);
-
-            LOG_DEBUG("Receiving data: {} bytes from {}",
-                      size,
-                      socket.remote_endpoint().address().to_string());
+            
+            std::string remote_addr = get_remote_address(socket);
+            LOG_DEBUG("Receiving data: {} bytes from {}", size, remote_addr);
 
             // Валидация размера
             constexpr uint32_t MAX_PACKET_SIZE = 100 * 1024 * 1024; // 100 MB

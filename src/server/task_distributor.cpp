@@ -66,13 +66,16 @@ std::map<uint64_t, TaskBatch> TaskDistributor::distribute_tasks(
             total_tasks_++;
         }
 
-        result[client->get_client_id()] = std::move(batch);
-
+        double first_begin = batch.tasks.front().begin;
+        double last_end = batch.tasks.back().end;
+        
         LOG_INFO("Client ID={}: assigned {} tasks, range=[{}, {}]",
                  client->get_client_id(),
                  num_tasks,
-                 batch.tasks.front().begin,
-                 batch.tasks.back().end);
+                 first_begin,
+                 last_end);
+
+        result[client->get_client_id()] = std::move(batch);
     }
 
     LOG_INFO("Total tasks created: {}", total_tasks_);
