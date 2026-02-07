@@ -1,6 +1,7 @@
 # Исполняемый файл клиента
 add_executable(client
-    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+    main.cpp
+    about.h
 )
 
 # Указываем, где искать заголовочные файлы
@@ -10,3 +11,11 @@ target_include_directories(client PRIVATE
 
 # Линкуем с библиотекой common
 target_link_libraries(client PRIVATE common)
+
+# Установка RPATH для Linux и macOS
+if(UNIX)
+    set_target_properties(client PROPERTIES
+        INSTALL_RPATH "$ORIGIN/../lib"
+        BUILD_WITH_INSTALL_RPATH TRUE
+    )
+endif()
