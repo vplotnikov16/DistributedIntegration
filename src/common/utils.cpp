@@ -4,10 +4,14 @@
 #ifdef _WIN32
     #include <windows.h>
     #include <sysinfoapi.h>
-#elif defined(__linux__) || defined(__APPLE__)
+#elif defined(__linux__)
     #include <unistd.h>
     #include <sys/utsname.h>
     #include <sys/sysinfo.h>
+    #include <sys/types.h>
+elif defined(__APPLE___)
+    #include <unistd.h>
+    #include <sys/utsname.h>
     #include <sys/types.h>
     #include <sys/sysctl.h>
 #endif
@@ -90,7 +94,6 @@ namespace sys_utils
 
         // ОЗУ
         struct sysinfo mem_info;
-        sysinfo(&mem_info);
         if (sysinfo(&mem_info) == 0)
         {
 
