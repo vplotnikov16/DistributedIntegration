@@ -9,7 +9,7 @@
     #include <sys/utsname.h>
     #include <sys/sysinfo.h>
     #include <sys/types.h>
-elif defined(__APPLE___)
+#elif defined(__APPLE___)
     #include <unistd.h>
     #include <sys/utsname.h>
     #include <sys/types.h>
