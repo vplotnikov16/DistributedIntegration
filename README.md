@@ -89,10 +89,10 @@ cmake --build out/build/macos-release
 
 ```bash
 # Сервер
-./out/build/<preset>/bin/server
+./out/build/<preset>/bin/Release/server
 
 # Клиент
-./out/build/<preset>/bin/client
+./out/build/<preset>/bin/Release/client
 ```
 
 Для Debug:
