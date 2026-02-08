@@ -180,9 +180,9 @@ void Server::accept_thread_func()
                 }
 
                 // Запускаем обработку в отдельном потоке
-                std::thread([this, socket_ptr, client_ip, client_port]() {
-                    handle_client_connection(std::move(*socket_ptr), client_ip, client_port);
-                }).detach();
+                std::thread([this, socket_ptr, client_ip, client_port]()
+                            { handle_client_connection(std::move(*socket_ptr), client_ip, client_port); })
+                    .detach();
             }
         }
         catch (const boost::system::system_error &e)
@@ -205,8 +205,8 @@ void Server::accept_thread_func()
     LOG_DEBUG("Accept thread finished");
 }
 
-void Server::handle_client_connection(tcp::socket socket, 
-                                      const std::string &client_ip, 
+void Server::handle_client_connection(tcp::socket socket,
+                                      const std::string &client_ip,
                                       uint16_t client_port)
 {
     try
@@ -244,15 +244,15 @@ void Server::handle_client_connection(tcp::socket socket,
 
         client_manager_.add_client(std::move(connection));
 
-        LOG_INFO("Client registered: ID={}, Cores={}", 
+        LOG_INFO("Client registered: ID={}, Cores={}",
                  client_id, handshake.system_info.cpu_cores);
-        LOG_INFO("Total clients: {}, Total cores: {}", 
+        LOG_INFO("Total clients: {}, Total cores: {}",
                  client_manager_.get_client_count(),
                  client_manager_.get_total_cpu_cores());
     }
     catch (const std::exception &e)
     {
-        LOG_ERROR("Error handling client connection from {}:{}: {}", 
+        LOG_ERROR("Error handling client connection from {}:{}: {}",
                   client_ip, client_port, e.what());
     }
 }
@@ -260,8 +260,11 @@ void Server::handle_client_connection(tcp::socket socket,
 void Server::stop_accepting_clients()
 {
     LOG_INFO("Stopping acceptance of new clients");
+
+    // Сначала останавливаем приём через флаг
     client_manager_.stop_accepting();
 
+    // Закрываем acceptor
     if (acceptor_ && acceptor_->is_open())
     {
         boost::system::error_code ec;
@@ -272,9 +275,61 @@ void Server::stop_accepting_clients()
         }
     }
 
+    // Ждем завершения потока с таймаутом
     if (accept_thread_.joinable())
     {
-        accept_thread_.join();
+        // Попытка с таймаутом
+        auto start = std::chrono::steady_clock::now();
+        const auto timeout = std::chrono::seconds(5);
+
+        while (accept_thread_.joinable())
+        {
+            // Пытаемся подключиться к самим себе, чтобы разблокировать accept()
+            try
+            {
+                boost::asio::io_context temp_io;
+                tcp::socket temp_socket(temp_io);
+                tcp::endpoint endpoint(tcp::v4(), port_);
+
+                boost::system::error_code ec;
+                temp_socket.connect(endpoint, ec);
+                temp_socket.close();
+            }
+            catch (...)
+            {
+                // Игнорируем ошибки
+            }
+
+            // Пробуем присоединиться с небольшой задержкой
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            if (std::chrono::steady_clock::now() - start > timeout)
+            {
+                LOG_WARN("Accept thread did not finish within timeout, detaching");
+                accept_thread_.detach();
+                break;
+            }
+
+            // Если поток все еще работает, проверяем условие цикла в accept_thread_func
+            if (!running_.load() || !client_manager_.is_accepting())
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+                // Пробуем join
+                if (accept_thread_.joinable())
+                {
+                    try
+                    {
+                        accept_thread_.join();
+                        break;
+                    }
+                    catch (...)
+                    {
+                        // Продолжаем цикл
+                    }
+                }
+            }
+        }
     }
 
     LOG_INFO("Client acceptance stopped");
@@ -392,8 +447,8 @@ bool Server::receive_results_from_client(ClientConnection *client, ResultAggrega
 
         aggregator.add_result(result_batch);
 
-        LOG_INFO("Client {}: results received ({:.3f}s)", 
-                 client->get_client_id(), 
+        LOG_INFO("Client {}: results received ({:.3f}s)",
+                 client->get_client_id(),
                  result_batch.total_time_seconds);
 
         return true;
